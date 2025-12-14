@@ -25,19 +25,6 @@ observer = new MutationObserver(() => {
   const button = getOrderButton();
   if (!button) return;
 
-  // Detect enabled state
-  if (!button.disabled && !button.dataset.enabledNotified) {
-    button.dataset.enabledNotified = 'true';
-
-    safeSendMessage({
-      type: 'ORDER_BUTTON_ENABLED',
-      payload: {
-        text: button.innerText.trim(),
-        url: location.href
-      }
-    });
-  }
-
   // Attach click listener once
   if (!button.dataset.clickListenerAttached) {
     button.dataset.clickListenerAttached = 'true';
