@@ -1,34 +1,40 @@
-// Background service worker
-// Safely creates notifications only when required fields exist
-
 chrome.runtime.onMessage.addListener((message) => {
-  if (!message || !message.type) {
-    return;
-  }
+  if (!message || !message.type) return;
 
-  let title = '';
-  let notificationMessage = '';
+  const iconUrl = 'https://app.lighter.xyz/assets/fartcoin-CAgd0qdd.png';
 
+  // === Button enabled notification ===
   if (message.type === 'ORDER_BUTTON_ENABLED') {
-    title = 'Order Button Enabled';
-    notificationMessage = 'Place Market Order button is now enabled';
+    const { bestBid, bestAsk, text, timestamp } = message.payload;
+
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl,
+      title: 'Order Button Enabled',
+      message:
+        `${text}\n` +
+        `Best Bid: ${bestBid || '-'}\n` +
+        `Best Ask: ${bestAsk || '-'}\n` +
+        `Time: ${new Date(timestamp).toLocaleTimeString()}`
+    });
   }
 
-  if (message.type === 'ORDER_BUTTON_CLICKED') {
-    title = 'Order Button Clicked';
-    notificationMessage = 'Place Market Order button was clicked';
-  }
+  // === Market order filled notification ===
+  if (message.type === 'MARKET_NOTIFICATION_FILLED') {
+    const { symbol, positionType, status, price, elapsedMs } = message.payload;
 
-  // Do NOT create a notification if required fields are missing
-  if (!title || !notificationMessage) {
-    return;
-  }
+    const latencyText = elapsedMs !== null ? `${elapsedMs} ms` : 'N/A';
 
-  chrome.notifications.create({
-    type: 'basic',
-    iconUrl: 'https://app.lighter.xyz/assets/fartcoin-CAgd0qdd.png',
-    title: title,
-    message: notificationMessage
-  });
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl,
+      title: 'Market Order Filled',
+      message:
+        `${symbol} - ${positionType}\n` +
+        `Status: ${status}\n` +
+        `Price: ${price ?? '-'}\n` +
+        `Latency: ${latencyText}`
+    });
+  }
 });
 

@@ -1,56 +1,91 @@
-// Runs inside app.lighter.xyz
-// Safely detects enable and click events for the Place Market Order button
+// ===== Selectors =====
+const BUTTON_SELECTOR = '[data-testid="place-order-button"]';
 
-const TARGET_BUTTON_SELECTOR = '[data-testid="place-order-button"]';
-let observer = null;
+// ===== State =====
+let lastOrderButtonTimestamp = null;
 
-// Safe wrapper to avoid "Extension context invalidated" crashes
+// ===== Helpers =====
 function safeSendMessage(message) {
   try {
-    if (chrome?.runtime?.id) {
-      chrome.runtime.sendMessage(message);
-    }
-  } catch (error) {
-    // Silently ignore invalidated context errors
-  }
+    if (chrome?.runtime?.id) chrome.runtime.sendMessage(message);
+  } catch (e) {}
 }
 
-// Find the order button
-function getOrderButton() {
-  return document.querySelector(TARGET_BUTTON_SELECTOR);
-}
-
-// Observe DOM mutations (SPA-safe)
-observer = new MutationObserver(() => {
-  const button = getOrderButton();
+// ===== Track Button Clicks =====
+const buttonObserver = new MutationObserver(() => {
+  const button = document.querySelector(BUTTON_SELECTOR);
   if (!button) return;
 
-  // Attach click listener once
-  if (!button.dataset.clickListenerAttached) {
-    button.dataset.clickListenerAttached = 'true';
+  if (!button.dataset.clickTimestamp) {
+    lastOrderButtonTimestamp = Date.now();
+    button.dataset.clickTimestamp = 'true';
 
-    button.addEventListener('click', () => {
-      safeSendMessage({
-        type: 'ORDER_BUTTON_CLICKED',
-        payload: {
-          text: button.innerText.trim(),
-          url: location.href
-        }
-      });
-    });
+    button.addEventListener(
+      'click',
+      () => {
+        lastOrderButtonTimestamp = Date.now();
+      },
+      { once: true }
+    );
   }
 });
 
-// Start observing
-observer.observe(document.documentElement, {
+buttonObserver.observe(document.documentElement, {
   childList: true,
   subtree: true,
   attributes: true,
   attributeFilter: ['disabled']
 });
 
-// Cleanup when the page is unloaded or replaced
+// ===== Observe DOM for Filled =====
+const filledObserver = new MutationObserver((mutations) => {
+  mutations.forEach((mutation) => {
+    mutation.addedNodes.forEach((node) => {
+      if (!(node instanceof HTMLElement)) return;
+
+      // Buscamos nodos que contengan "Filled"
+      if (node.innerText?.includes('Filled') && !node.dataset.filledDetected) {
+        node.dataset.filledDetected = 'true';
+
+        const children = Array.from(node.parentElement.children);
+        const filledIndex = children.findIndex(el => el === node);
+
+        // Extraemos price 2 hermanos después (status -> size -> price)
+        const priceEl = children[filledIndex + 2];
+        const price = priceEl ? priceEl.innerText.trim() : null;
+
+        // Extraemos symbol y positionType de la notificación principal
+        const notif = node.closest('[data-testid^="notification-market-"]');
+        const symbolEl = notif?.querySelector('span.text-gray-0');
+        const typeEl = notif?.querySelector('div.inline-flex span');
+
+        const symbol = symbolEl ? symbolEl.innerText.trim() : 'UNKNOWN';
+        const positionType = typeEl ? typeEl.innerText.trim() : 'UNKNOWN';
+
+        const filledTimestamp = Date.now();
+        const elapsedMs = lastOrderButtonTimestamp ? filledTimestamp - lastOrderButtonTimestamp : null;
+
+        safeSendMessage({
+          type: 'MARKET_NOTIFICATION_FILLED',
+          payload: {
+            symbol,
+            positionType,
+            status: 'Filled',
+            price,
+            timestamp: filledTimestamp,
+            elapsedMs
+          }
+        });
+      }
+    });
+  });
+});
+
+filledObserver.observe(document.documentElement, { childList: true, subtree: true });
+
+// ===== Cleanup =====
 window.addEventListener('beforeunload', () => {
-  if (observer) observer.disconnect();
+  buttonObserver.disconnect();
+  filledObserver.disconnect();
 });
 
