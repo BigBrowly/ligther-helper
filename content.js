@@ -1,5 +1,8 @@
 // ===== Selectors =====
-const BUTTON_SELECTOR = '[data-testid="place-order-button"]';
+const BUTTON_SELECTORS = [
+  '[data-testid="place-order-button"]',
+  '[data-testid="order-panel-close-position-button"]'
+];
 
 // ===== State =====
 let lastOrderButtonTimestamp = null;
@@ -11,31 +14,30 @@ function safeSendMessage(message) {
   } catch (e) {}
 }
 
-// ===== Track Button Clicks =====
+// Función para añadir listener a un botón si no lo tiene
+function addClickListener(button, callback) {
+  if (!button || button.dataset.listenerAdded) return;
+  button.dataset.listenerAdded = 'true';
+  button.addEventListener('click', callback);
+}
+
+// Callback común (puedes diferenciar según el botón)
+function handleButtonClick(event) {
+  const buttonId = event.currentTarget.dataset.testid;
+  console.log(`Click en botón: ${buttonId}`);
+  lastOrderButtonTimestamp = Date.now();
+}
+
+// Observador para capturar botones que aparecen dinámicamente
 const buttonObserver = new MutationObserver(() => {
-  const button = document.querySelector(BUTTON_SELECTOR);
-  if (!button) return;
-
-  if (!button.dataset.clickTimestamp) {
-    lastOrderButtonTimestamp = Date.now();
-    button.dataset.clickTimestamp = 'true';
-
-    button.addEventListener(
-      'click',
-      () => {
-        lastOrderButtonTimestamp = Date.now();
-      },
-      { once: true }
-    );
-  }
+  BUTTON_SELECTORS.forEach(selector => {
+    const button = document.querySelector(selector);
+    addClickListener(button, handleButtonClick);
+  });
 });
 
-buttonObserver.observe(document.documentElement, {
-  childList: true,
-  subtree: true,
-  attributes: true,
-  attributeFilter: ['disabled']
-});
+// Iniciar observador
+buttonObserver.observe(document.documentElement, { childList: true, subtree: true });
 
 // ===== Observe DOM for Filled =====
 const filledObserver = new MutationObserver((mutations) => {
@@ -90,4 +92,3 @@ window.addEventListener('beforeunload', () => {
   buttonObserver.disconnect();
   filledObserver.disconnect();
 });
-
