@@ -21,9 +21,13 @@ chrome.runtime.onMessage.addListener((message) => {
 
   // === Market order filled notification ===
   if (message.type === 'MARKET_NOTIFICATION_FILLED') {
-    const { symbol, positionType, status, price, elapsedMs } = message.payload;
+    console.log(message.payload);
+    const { symbol, positionType, bestprice, price, elapsedMs } = message.payload;
 
     const latencyText = elapsedMs !== null ? `${elapsedMs} ms` : 'N/A';
+
+    const spread = (bestprice['bestAsk'] - bestprice['bestBid']) / bestprice['bestAsk'] * 100;
+    const spread_text = bestprice['bestBid'] + '/' + bestprice['bestAsk'];
 
     chrome.notifications.create({
       type: 'basic',
@@ -31,7 +35,8 @@ chrome.runtime.onMessage.addListener((message) => {
       title: 'Market Order Filled',
       message:
         `${symbol} - ${positionType}\n` +
-        `Status: ${status}\n` +
+        `Bid/Ask: ${spread_text}\n` +
+        `Spread: ${spread.toFixed(4)}%\n` +
         `Price: ${price ?? '-'}\n` +
         `Latency: ${latencyText}`
     });

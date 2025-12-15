@@ -4,10 +4,24 @@ const BUTTON_SELECTORS = [
   '[data-testid="order-panel-close-position-button"]'
 ];
 
+const BEST_BID_SELECTOR = 'div[data-testid="ob-bid"] span[data-testid="price"]';
+const BEST_ASK_SELECTOR = 'div[data-testid="ob-ask"] span[data-testid="price"]';
+
 // ===== State =====
 let lastOrderButtonTimestamp = null;
+let lastOrderBestPrice = null;
 
 // ===== Helpers =====
+function getBestPrices() {
+  const bestBidEl = document.querySelector(BEST_BID_SELECTOR);
+  const bestAskEl = document.querySelector(BEST_ASK_SELECTOR);
+
+  return {
+    bestBid: bestBidEl ? bestBidEl.innerText.trim() : null,
+    bestAsk: bestAskEl ? bestAskEl.innerText.trim() : null
+  };
+}
+
 function safeSendMessage(message) {
   try {
     if (chrome?.runtime?.id) chrome.runtime.sendMessage(message);
@@ -23,9 +37,9 @@ function addClickListener(button, callback) {
 
 // Callback común (puedes diferenciar según el botón)
 function handleButtonClick(event) {
-  const buttonId = event.currentTarget.dataset.testid;
-  console.log(`Click en botón: ${buttonId}`);
+  const prices = getBestPrices();
   lastOrderButtonTimestamp = Date.now();
+  lastOrderBestPrice = prices;
 }
 
 // Observador para capturar botones que aparecen dinámicamente
@@ -75,6 +89,7 @@ const filledObserver = new MutationObserver((mutations) => {
             symbol,
             positionType,
             status: 'Filled',
+            bestprice: lastOrderBestPrice,
             price,
             timestamp: filledTimestamp,
             elapsedMs
