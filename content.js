@@ -51,12 +51,14 @@ const filledObserver = new MutationObserver((mutations) => {
         const filledIndex = children.findIndex(el => el === node);
 
         // Extraemos price 2 hermanos después (status -> size -> price)
-        const priceEl = children[filledIndex + 2];
+        const priceEl = node.parentElement.nextElementSibling.nextElementSibling.querySelectorAll('span')[1];
         const price = priceEl ? priceEl.innerText.trim() : null;
 
         // Extraemos symbol y positionType de la notificación principal
-        const notif = node.closest('[data-testid^="notification-market-"]');
+        const notif = node.parentElement.parentElement.previousElementSibling;
+        console.log(notif)
         const symbolEl = notif?.querySelector('span.text-gray-0');
+        console.log(symbolEl)
         const typeEl = notif?.querySelector('div.inline-flex span');
 
         const symbol = symbolEl ? symbolEl.innerText.trim() : 'UNKNOWN';
