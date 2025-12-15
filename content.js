@@ -17,8 +17,8 @@ function getBestPrices() {
   const bestAskEl = document.querySelector(BEST_ASK_SELECTOR);
 
   return {
-    bestBid: bestBidEl ? bestBidEl.innerText.trim() : null,
-    bestAsk: bestAskEl ? bestAskEl.innerText.trim() : null
+    bestBid: bestBidEl ? bestBidEl.innerText.trim().replace(/,/g, '') : null,
+    bestAsk: bestAskEl ? bestAskEl.innerText.trim().replace(/,/g, '') : null
   };
 }
 
@@ -68,20 +68,17 @@ const filledObserver = new MutationObserver((mutations) => {
 
         // Extraemos price 2 hermanos después (status -> size -> price)
         const priceEl = node.parentElement.nextElementSibling.nextElementSibling.querySelectorAll('span')[1];
-        const price = priceEl ? priceEl.innerText.trim() : null;
+        const price = priceEl ? priceEl.innerText.trim().replace(/,/g, '') : null;
 
         // Extraemos symbol y positionType de la notificación principal
         const notif = node.parentElement.parentElement.previousElementSibling;
-        console.log(notif)
         const symbolEl = notif?.querySelector('span.text-gray-0');
-        console.log(symbolEl)
         const typeEl = notif?.querySelector('div.inline-flex span');
 
         const symbol = symbolEl ? symbolEl.innerText.trim() : 'UNKNOWN';
         const positionType = typeEl ? typeEl.innerText.trim() : 'UNKNOWN';
 
-        const filledTimestamp = Date.now();
-        const elapsedMs = lastOrderButtonTimestamp ? filledTimestamp - lastOrderButtonTimestamp : null;
+        const elapsedMs = lastOrderButtonTimestamp ? Date.now() - lastOrderButtonTimestamp : null;
 
         safeSendMessage({
           type: 'MARKET_NOTIFICATION_FILLED',
@@ -91,7 +88,6 @@ const filledObserver = new MutationObserver((mutations) => {
             status: 'Filled',
             bestprice: lastOrderBestPrice,
             price,
-            timestamp: filledTimestamp,
             elapsedMs
           }
         });

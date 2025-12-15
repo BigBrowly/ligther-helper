@@ -3,22 +3,6 @@ chrome.runtime.onMessage.addListener((message) => {
 
   const iconUrl = 'https://app.lighter.xyz/assets/fartcoin-CAgd0qdd.png';
 
-  // === Button enabled notification ===
-  if (message.type === 'ORDER_BUTTON_ENABLED') {
-    const { bestBid, bestAsk, text, timestamp } = message.payload;
-
-    chrome.notifications.create({
-      type: 'basic',
-      iconUrl,
-      title: 'Order Button Enabled',
-      message:
-        `${text}\n` +
-        `Best Bid: ${bestBid || '-'}\n` +
-        `Best Ask: ${bestAsk || '-'}\n` +
-        `Time: ${new Date(timestamp).toLocaleTimeString()}`
-    });
-  }
-
   // === Market order filled notification ===
   if (message.type === 'MARKET_NOTIFICATION_FILLED') {
     console.log(message.payload);
@@ -29,6 +13,23 @@ chrome.runtime.onMessage.addListener((message) => {
     const spread = (bestprice['bestAsk'] - bestprice['bestBid']) / bestprice['bestAsk'] * 100;
     const spread_text = bestprice['bestBid'] + '/' + bestprice['bestAsk'];
 
+    let original_price;
+    let slippage;
+    let slip_ratio;
+
+    if(positionType == 'LONG') {
+      original_price = bestprice['bestAsk']; 
+      slippage = price - original_price;
+      slip_ratio = (price - original_price) / original_price * 100
+    }
+    else
+    {
+      original_price = bestprice['bestBid']; 
+      slippage = original_price - price;
+      slip_ratio = (original_price - price) / original_price * 100
+    }
+      
+
     chrome.notifications.create({
       type: 'basic',
       iconUrl,
@@ -37,6 +38,7 @@ chrome.runtime.onMessage.addListener((message) => {
         `${symbol} - ${positionType}\n` +
         `Bid/Ask: ${spread_text}\n` +
         `Spread: ${spread.toFixed(4)}%\n` +
+        `Slippage: ${slippage} ${slip_ratio.toFixed(4)}%\n` +
         `Price: ${price ?? '-'}\n` +
         `Latency: ${latencyText}`
     });
