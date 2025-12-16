@@ -1,3 +1,8 @@
+// ===== Inject nonce prefetch script =====
+const script = document.createElement('script');
+script.src = chrome.runtime.getURL('injected.js');
+document.documentElement.appendChild(script);
+
 // ===== Selectors =====
 const BUTTON_SELECTORS = [
   '[data-testid="place-order-button"]',

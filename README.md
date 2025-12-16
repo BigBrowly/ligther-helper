@@ -10,6 +10,7 @@ This extension does not require any special permissions or wallet access. It sim
 
 - Detects when you execute market orders (Place Order / Close Position)
 - Captures the best bid/ask from the order book at the moment of the click
+- **Nonce prefetching**: Caches the nonce locally to skip the network request on subsequent orders, reducing latency
 - Automatically calculates:
   - **Spread**: difference between bid and ask
   - **Slippage**: difference between expected price and execution price
@@ -37,5 +38,6 @@ This extension does not require any special permissions or wallet access. It sim
 
 - `manifest.json` - Extension configuration
 - `content.js` - Script that detects clicks and orders on the page
+- `injected.js` - Script that intercepts nonce requests for prefetching
 - `background.js` - Service worker that processes data and shows notifications
 - `popup.html` / `popup.js` - Popup interface with history and statistics
