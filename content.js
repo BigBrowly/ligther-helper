@@ -27,12 +27,6 @@ function getBestPrices() {
   };
 }
 
-function safeSendMessage(message) {
-  try {
-    if (chrome?.runtime?.id) chrome.runtime.sendMessage(message);
-  } catch (e) {}
-}
-
 // Add click listener to button if not already added
 function addClickListener(button, callback) {
   if (!button || button.dataset.listenerAdded) return;
@@ -103,7 +97,7 @@ const filledObserver = new MutationObserver((mutations) => {
 
         const latency = Date.now() - lastOrderButtonTimestamp;
 
-        safeSendMessage({
+        chrome.runtime.sendMessage({
           type: 'MARKET_NOTIFICATION_FILLED',
           payload: {
             symbol,
