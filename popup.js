@@ -62,7 +62,7 @@ function renderStats(orders) {
     return;
   }
 
-  // Filtrar valores válidos
+  // Filter valid values
   const validLatencies = orders.map(o => o.latency).filter(l => typeof l === 'number');
   const validSlips = orders.map(o => o.slipRatio).filter(s => typeof s === 'number');
   const validSpreads = orders.map(o => o.spread).filter(s => typeof s === 'number');
