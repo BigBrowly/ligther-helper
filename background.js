@@ -18,7 +18,7 @@ chrome.runtime.onMessage.addListener((message) => {
     const spread = (bestprice['bestAsk'] - bestprice['bestBid']) / bestprice['bestAsk'];
     const spread_text = bestprice['bestBid'] + '/' + bestprice['bestAsk'];
 
-    let best_price;
+    let bestPrice;
     let slippage;
     let slipRatio;
 
