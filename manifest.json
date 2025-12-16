@@ -13,8 +13,8 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_width": 720,
-    "default_height": 480
+    "default_width": 800,
+    "default_height": 600
   },
   "content_scripts": [
     {

@@ -48,7 +48,7 @@ function renderOrders(orders) {
         <td>${order.price ?? '-'}</td>
         <td>${spreadPercent != null ? spreadPercent.toFixed(4) : '-'}</td>
         <td>${slipPercent != null ? slipPercent.toFixed(4) : '-'}</td>
-        <td>${order.cost?.toFixed(4) ?? '-'}</td>
+        <td>${order.cost?.toFixed(2) ?? '-'}</td>
         <td>${order.latency != null ? order.latency + ' ms' : '-'}</td>
       `;
 
@@ -88,5 +88,5 @@ function renderStats(orders) {
     `Avg Latency: ${avgLatency.toFixed(1)} ms | ` +
     `Avg Spread: ${(avgSpread * 100).toFixed(4)}% | ` +
     `Avg Slip: ${(avgSlip * 100).toFixed(4)}% | ` +
-    `Total Cost: $${totalCost.toFixed(4)}`;
+    `Total Cost: $${totalCost.toFixed(2)}`;
 }
