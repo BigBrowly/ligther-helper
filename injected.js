@@ -40,6 +40,24 @@ window.fetch = async function(...args) {
     return response;
   }
 
+  // Intercept sendTx responses to detect nonce errors
+  if (urlStr.includes('/api/v1/sendTx')) {
+    const response = await originalFetch.apply(this, args);
+    const cloned = response.clone();
+
+    try {
+      const data = await cloned.json();
+      // code 21104 = invalid nonce
+      if (data.code === 21104) {
+        console.log('[Lighter Cost] Invalid nonce detected, resetting cache');
+        cachedNonce = null;
+        cachedAccountIndex = null;
+      }
+    } catch (e) {}
+
+    return response;
+  }
+
   // All other requests pass through normally
   return originalFetch.apply(this, args);
 };
