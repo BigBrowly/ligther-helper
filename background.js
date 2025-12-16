@@ -6,11 +6,11 @@ chrome.runtime.onMessage.addListener((message) => {
   // === Market order filled notification ===
   if (message.type === 'MARKET_NOTIFICATION_FILLED') {
     console.log(message.payload);
-    const { symbol, positionType, bestprice, price, elapsedMs } = message.payload;
+    const { symbol, positionType, bestprice, price, size, elapsedMs } = message.payload;
 
     const latencyText = elapsedMs !== null ? `${elapsedMs} ms` : 'N/A';
 
-    const spread = (bestprice['bestAsk'] - bestprice['bestBid']) / bestprice['bestAsk'] * 100;
+    const spread = (bestprice['bestAsk'] - bestprice['bestBid']) / bestprice['bestAsk'];
     const spread_text = bestprice['bestBid'] + '/' + bestprice['bestAsk'];
 
     let original_price;
@@ -20,16 +20,17 @@ chrome.runtime.onMessage.addListener((message) => {
     if(positionType == 'LONG') {
       original_price = bestprice['bestAsk']; 
       slippage = price - original_price;
-      slip_ratio = (price - original_price) / original_price * 100
+      slip_ratio = (price - original_price) / original_price
     }
     else
     {
       original_price = bestprice['bestBid']; 
       slippage = original_price - price;
-      slip_ratio = (original_price - price) / original_price * 100
+      slip_ratio = (original_price - price) / original_price
     }
-      
 
+    const cost = size * price * (spread + slippage)
+      
     chrome.notifications.create({
       type: 'basic',
       iconUrl,
@@ -37,9 +38,11 @@ chrome.runtime.onMessage.addListener((message) => {
       message:
         `${symbol} - ${positionType}\n` +
         `Bid/Ask: ${spread_text}\n` +
-        `Spread: ${spread.toFixed(4)}%\n` +
-        `Slippage: ${slippage} ${slip_ratio.toFixed(4)}%\n` +
         `Price: ${price ?? '-'}\n` +
+        `Spread: ${(spread * 100).toFixed(4)}%\n` +
+        `Slippage: ${slippage.toLocaleString()} Ratio: ${(slip_ratio * 100).toFixed(4)}%\n` +
+        `Size: ${size}\n` +
+        `Cost: ${cost.toFixed(4)}$\n` +
         `Latency: ${latencyText}`
     });
   }

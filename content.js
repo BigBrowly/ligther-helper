@@ -67,6 +67,9 @@ const filledObserver = new MutationObserver((mutations) => {
         const filledIndex = children.findIndex(el => el === node);
 
         // Extraemos price 2 hermanos después (status -> size -> price)
+        const sizeEl = node.parentElement.nextElementSibling.querySelectorAll('span')[1];
+        const size = sizeEl ? sizeEl.innerText.trim().replace(/,/g, '') : null;
+
         const priceEl = node.parentElement.nextElementSibling.nextElementSibling.querySelectorAll('span')[1];
         const price = priceEl ? priceEl.innerText.trim().replace(/,/g, '') : null;
 
@@ -88,6 +91,7 @@ const filledObserver = new MutationObserver((mutations) => {
             status: 'Filled',
             bestprice: lastOrderBestPrice,
             price,
+            size,
             elapsedMs
           }
         });
