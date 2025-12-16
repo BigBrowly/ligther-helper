@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Orders</title>
+  <style>
+    body {
+      font-family: monospace;
+      background: #111;
+      color: #eee;
+      margin: 0;
+      padding: 6px;
+      width: 720px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+
+    th, td {
+      padding: 4px 6px;
+      border-bottom: 1px solid #333;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background: #1a1a1a;
+      z-index: 1;
+    }
+
+    td.symbol, th.symbol {
+      text-align: left;
+      font-weight: bold;
+    }
+
+    tr.positive { color: #7CFF7C; }
+    tr.negative { color: #FF7C7C; }
+
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      font-size: 11px;
+    }
+
+    button {
+      background: #222;
+      color: #eee;
+      border: 1px solid #444;
+      padding: 2px 6px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #333;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="toolbar">
+    <div id="stats"></div>
+    <button id="clear">Clear</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th class="symbol">Symbol</th>
+        <th>Side</th>
+        <th>Size</th>
+        <th>Best</th>
+        <th>Price</th>
+        <th>Spread %</th> <!-- Nueva columna -->
+        <th>Slip %</th>
+        <th>Cost</th>
+        <th>Latency</th>
+      </tr>
+    </thead>
+    <tbody id="orders"></tbody>
+  </table>
+
+  <script src="popup.js"></script>
+</body>
+</html>
+

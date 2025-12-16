@@ -81,7 +81,7 @@ const filledObserver = new MutationObserver((mutations) => {
         const symbol = symbolEl ? symbolEl.innerText.trim() : 'UNKNOWN';
         const side = typeEl ? typeEl.innerText.trim() : 'UNKNOWN';
 
-        const elapsedMs = lastOrderButtonTimestamp ? Date.now() - lastOrderButtonTimestamp : null;
+        const latency = lastOrderButtonTimestamp ? Date.now() - lastOrderButtonTimestamp : null;
 
         safeSendMessage({
           type: 'MARKET_NOTIFICATION_FILLED',
@@ -92,7 +92,7 @@ const filledObserver = new MutationObserver((mutations) => {
             bestprice: lastOrderBestPrice,
             price,
             size,
-            elapsedMs
+            latency
           }
         });
       }
