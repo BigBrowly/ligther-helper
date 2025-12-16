@@ -1,3 +1,10 @@
+const ORDERS_KEY = 'orders';
+
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.storage.local.set({ [ORDERS_KEY]: [] });
+});
+
+
 chrome.runtime.onMessage.addListener((message) => {
   if (!message || !message.type) return;
 
@@ -6,44 +13,50 @@ chrome.runtime.onMessage.addListener((message) => {
   // === Market order filled notification ===
   if (message.type === 'MARKET_NOTIFICATION_FILLED') {
     console.log(message.payload);
-    const { symbol, positionType, bestprice, price, size, elapsedMs } = message.payload;
+    const { symbol, side, bestprice, price, size, elapsedMs } = message.payload;
 
-    const latencyText = elapsedMs !== null ? `${elapsedMs} ms` : 'N/A';
+    const latency = elapsedMs !== null ? `${elapsedMs} ms` : 'N/A';
 
     const spread = (bestprice['bestAsk'] - bestprice['bestBid']) / bestprice['bestAsk'];
     const spread_text = bestprice['bestBid'] + '/' + bestprice['bestAsk'];
 
-    let original_price;
+    let best_price;
     let slippage;
-    let slip_ratio;
+    let slipRatio;
 
-    if(positionType == 'LONG') {
-      original_price = bestprice['bestAsk']; 
-      slippage = price - original_price;
-      slip_ratio = (price - original_price) / original_price
+    if(side == 'LONG') {
+      bestPrice = bestprice['bestAsk']; 
+      slippage = price - bestPrice;
+      slipRatio = (price - bestPrice) / bestPrice
     }
     else
     {
-      original_price = bestprice['bestBid']; 
-      slippage = original_price - price;
-      slip_ratio = (original_price - price) / original_price
+      bestPrice = bestprice['bestBid']; 
+      slippage = bestPrice - price;
+      slipRatio = (bestPrice - price) / bestPrice
     }
 
     const cost = size * price * (spread + slippage)
+
+    chrome.storage.local.get(ORDERS_KEY, ({ orders = [] }) => {
+      orders.push({id:crypto.randomUUID(), timestamp: Date.now(), symbol, side, price, size, bestPrice, spread, slipRatio, cost, latency});
+      chrome.storage.local.set({ [ORDERS_KEY]: orders });
+    });
+
       
     chrome.notifications.create({
       type: 'basic',
       iconUrl,
       title: 'Market Order Filled',
       message:
-        `${symbol} - ${positionType}\n` +
+        `${symbol} - ${side}\n` +
         `Bid/Ask: ${spread_text}\n` +
         `Price: ${price ?? '-'}\n` +
         `Spread: ${(spread * 100).toFixed(4)}%\n` +
-        `Slippage: ${slippage.toLocaleString()} Ratio: ${(slip_ratio * 100).toFixed(4)}%\n` +
+        `Slippage: ${slippage.toLocaleString()} Ratio: ${(slipRatio * 100).toFixed(4)}%\n` +
         `Size: ${size}\n` +
         `Cost: ${cost.toFixed(4)}$\n` +
-        `Latency: ${latencyText}`
+        `Latency: ${latency}`
     });
   }
 });

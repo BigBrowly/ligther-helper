@@ -5,10 +5,16 @@
   "description": "Detects button clicks on app.lighter.xyz and shows notifications",
   "permissions": [
     "notifications",
-    "activeTab"
+    "activeTab",
+    "storage"
   ],
   "background": {
     "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_width": 720,
+    "default_height": 480
   },
   "content_scripts": [
     {
@@ -18,3 +24,4 @@
     }
   ]
 }
+

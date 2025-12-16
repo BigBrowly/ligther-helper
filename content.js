@@ -79,7 +79,7 @@ const filledObserver = new MutationObserver((mutations) => {
         const typeEl = notif?.querySelector('div.inline-flex span');
 
         const symbol = symbolEl ? symbolEl.innerText.trim() : 'UNKNOWN';
-        const positionType = typeEl ? typeEl.innerText.trim() : 'UNKNOWN';
+        const side = typeEl ? typeEl.innerText.trim() : 'UNKNOWN';
 
         const elapsedMs = lastOrderButtonTimestamp ? Date.now() - lastOrderButtonTimestamp : null;
 
@@ -87,7 +87,7 @@ const filledObserver = new MutationObserver((mutations) => {
           type: 'MARKET_NOTIFICATION_FILLED',
           payload: {
             symbol,
-            positionType,
+            side,
             status: 'Filled',
             bestprice: lastOrderBestPrice,
             price,
