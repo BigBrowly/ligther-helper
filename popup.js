@@ -36,7 +36,7 @@ function renderOrders(orders) {
           : null;
 
       if (slipPercent != null) {
-        tr.className = slipPercent >= 0 ? 'positive' : 'negative';
+        tr.className = slipPercent >= 0 ? 'negative' : 'positive';
       }
 
       tr.innerHTML = `
@@ -83,10 +83,7 @@ function renderStats(orders) {
     .map(o => o.cost ?? 0)
     .reduce((a, c) => a + c, 0);
 
-  statsEl.textContent =
-    `Orders: ${orders.length} | ` +
-    `Avg Latency: ${avgLatency.toFixed(1)} ms | ` +
-    `Avg Spread: ${(avgSpread * 100).toFixed(4)}% | ` +
-    `Avg Slip: ${(avgSlip * 100).toFixed(4)}% | ` +
-    `Total Cost: $${totalCost.toFixed(2)}`;
+  statsEl.innerHTML =
+    `Orders: ${orders.length} | Total Cost: $${totalCost.toFixed(2)}<br>` +
+    `Avg Latency: ${avgLatency.toFixed(1)} ms | Avg Spread: ${(avgSpread * 100).toFixed(4)}% | Avg Slip: ${(avgSlip * 100).toFixed(4)}%`;
 }
