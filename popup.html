@@ -205,11 +205,22 @@
       color: #52525b;
     }
 
-    .empty-state svg {
-      width: 48px;
-      height: 48px;
-      margin-bottom: 12px;
-      opacity: 0.3;
+    /* Delete button */
+    .btn-delete {
+      background: transparent;
+      border: none;
+      color: #52525b;
+      cursor: pointer;
+      padding: 2px 6px;
+      font-size: 14px;
+      line-height: 1;
+      border-radius: 3px;
+      transition: all 0.15s;
+    }
+
+    .btn-delete:hover {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
     }
   </style>
 </head>
@@ -236,6 +247,7 @@
           <th>Slippage</th>
           <th>Cost</th>
           <th>Latency</th>
+          <th></th>
         </tr>
       </thead>
       <tbody id="orders"></tbody>

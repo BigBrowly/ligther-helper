@@ -16,13 +16,23 @@ clearBtn.onclick = () => {
   });
 };
 
+function deleteOrder(id) {
+  chrome.storage.local.get(ORDERS_KEY, ({ orders = [] }) => {
+    const updated = orders.filter(o => o.id !== id);
+    chrome.storage.local.set({ [ORDERS_KEY]: updated }, () => {
+      renderOrders(updated);
+      renderStats(updated);
+    });
+  });
+}
+
 function renderOrders(orders) {
   tbody.innerHTML = '';
 
   if (!orders.length) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="10" class="empty-state">
+        <td colspan="11" class="empty-state">
           <div>No orders recorded yet</div>
         </td>
       </tr>
@@ -63,8 +73,10 @@ function renderOrders(orders) {
         <td class="${slipClass}">${slipPercent != null ? slipPercent.toFixed(3) + '%' : '-'}</td>
         <td class="cost">$${order.cost?.toFixed(2) ?? '-'}</td>
         <td class="latency">${order.latency != null ? order.latency + 'ms' : '-'}</td>
+        <td><button class="btn-delete" data-id="${order.id}">&times;</button></td>
       `;
 
+      tr.querySelector('.btn-delete').onclick = () => deleteOrder(order.id);
       tbody.appendChild(tr);
     });
 }
