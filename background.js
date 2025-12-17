@@ -38,7 +38,7 @@ chrome.runtime.onMessage.addListener((message) => {
       slipRatio = (bestPrice - price) / bestPrice
     }
 
-    const cost = size * price * (spread + slipRatio)
+    const cost = size * price * (spread / 2 + slipRatio)
 
     chrome.storage.local.get(ORDERS_KEY, ({ orders = [] }) => {
       orders.push({id:crypto.randomUUID(), timestamp: Date.now(), symbol, side, price, size, bestPrice, spread, slipRatio, cost, latency});
