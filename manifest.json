@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Lighter Cost Tracker",
+  "name": "Lighter Helper",
   "version": "1.0.0",
   "description": "Track execution costs (spread, slippage, latency) for market orders on Lighter.xyz",
   "permissions": [
