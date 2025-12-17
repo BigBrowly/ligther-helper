@@ -129,7 +129,9 @@ window.addEventListener('beforeunload', () => {
 
 // ===== Volume Filter =====
 const MIN_VOLUME_KEY = 'minVolume';
+const VOLUME_FILTER_ENABLED_KEY = 'volumeFilterEnabled';
 let currentMinVolume = 50000000; // 50M default
+let volumeFilterEnabled = false;
 
 function parseVolume(text) {
   if (!text) return 0;
@@ -154,15 +156,21 @@ function applyVolumeFilter() {
     const volumeCell = row.querySelector('td[data-testid$="_dailyQuoteVolume"] p');
     if (!volumeCell) return;
 
+    if (!volumeFilterEnabled) {
+      row.style.display = '';
+      return;
+    }
+
     const volume = parseVolume(volumeCell.textContent);
     row.style.display = volume >= currentMinVolume ? '' : 'none';
   });
 }
 
-// Load saved min volume
-chrome.storage.local.get(MIN_VOLUME_KEY, (result) => {
+// Load saved settings
+chrome.storage.local.get([MIN_VOLUME_KEY, VOLUME_FILTER_ENABLED_KEY], (result) => {
   const saved = result[MIN_VOLUME_KEY] || '50M';
   currentMinVolume = parseVolume(saved);
+  volumeFilterEnabled = result[VOLUME_FILTER_ENABLED_KEY] ?? false;
   applyVolumeFilter();
 });
 
@@ -170,8 +178,11 @@ chrome.storage.local.get(MIN_VOLUME_KEY, (result) => {
 chrome.storage.onChanged.addListener((changes) => {
   if (changes[MIN_VOLUME_KEY]) {
     currentMinVolume = parseVolume(changes[MIN_VOLUME_KEY].newValue || '50M');
-    applyVolumeFilter();
   }
+  if (changes[VOLUME_FILTER_ENABLED_KEY]) {
+    volumeFilterEnabled = changes[VOLUME_FILTER_ENABLED_KEY].newValue ?? false;
+  }
+  applyVolumeFilter();
 });
 
 // Observe for new rows

@@ -1,16 +1,21 @@
 const ORDERS_KEY = 'orders';
 const MIN_VOLUME_KEY = 'minVolume';
+const VOLUME_FILTER_ENABLED_KEY = 'volumeFilterEnabled';
 
 const tbody = document.getElementById('orders');
 const statsEl = document.getElementById('stats');
 const clearBtn = document.getElementById('clear');
 const minVolumeInput = document.getElementById('minVolume');
+const volumeFilterToggle = document.getElementById('volumeFilterEnabled');
 
-chrome.storage.local.get([ORDERS_KEY, MIN_VOLUME_KEY], (result) => {
+chrome.storage.local.get([ORDERS_KEY, MIN_VOLUME_KEY, VOLUME_FILTER_ENABLED_KEY], (result) => {
   const orders = result[ORDERS_KEY] || [];
   const minVolume = result[MIN_VOLUME_KEY] || '50M';
+  const filterEnabled = result[VOLUME_FILTER_ENABLED_KEY] ?? false;
 
   minVolumeInput.value = minVolume;
+  volumeFilterToggle.checked = filterEnabled;
+  minVolumeInput.disabled = !filterEnabled;
   renderOrders(orders);
   renderStats(orders);
 });
@@ -18,6 +23,12 @@ chrome.storage.local.get([ORDERS_KEY, MIN_VOLUME_KEY], (result) => {
 minVolumeInput.addEventListener('input', () => {
   const value = minVolumeInput.value.trim().toUpperCase();
   chrome.storage.local.set({ [MIN_VOLUME_KEY]: value });
+});
+
+volumeFilterToggle.addEventListener('change', () => {
+  const enabled = volumeFilterToggle.checked;
+  minVolumeInput.disabled = !enabled;
+  chrome.storage.local.set({ [VOLUME_FILTER_ENABLED_KEY]: enabled });
 });
 
 clearBtn.onclick = () => {
