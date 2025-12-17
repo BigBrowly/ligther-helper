@@ -64,6 +64,38 @@
       border-color: rgba(239, 68, 68, 0.4);
     }
 
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .volume-filter {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .volume-filter label {
+      font-size: 11px;
+      color: #71717a;
+    }
+
+    .volume-filter input {
+      width: 70px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 4px;
+      padding: 5px 8px;
+      font-size: 12px;
+      color: #fff;
+      outline: none;
+    }
+
+    .volume-filter input:focus {
+      border-color: rgba(255,255,255,0.2);
+    }
+
     /* Stats Cards */
     .stats-grid {
       display: flex;
@@ -228,7 +260,13 @@
 
   <div class="header">
     <h1>Lighter Cost Tracker</h1>
-    <button id="clear" class="btn-clear">Clear All</button>
+    <div class="header-controls">
+      <div class="volume-filter">
+        <label for="minVolume">Min Volume</label>
+        <input type="text" id="minVolume" placeholder="50M">
+      </div>
+      <button id="clear" class="btn-clear">Clear All</button>
+    </div>
   </div>
 
   <div class="stats-grid" id="stats"></div>

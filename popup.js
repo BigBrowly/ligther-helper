@@ -1,12 +1,23 @@
 const ORDERS_KEY = 'orders';
+const MIN_VOLUME_KEY = 'minVolume';
 
 const tbody = document.getElementById('orders');
 const statsEl = document.getElementById('stats');
 const clearBtn = document.getElementById('clear');
+const minVolumeInput = document.getElementById('minVolume');
 
-chrome.storage.local.get(ORDERS_KEY, ({ orders = [] }) => {
+chrome.storage.local.get([ORDERS_KEY, MIN_VOLUME_KEY], (result) => {
+  const orders = result[ORDERS_KEY] || [];
+  const minVolume = result[MIN_VOLUME_KEY] || '50M';
+
+  minVolumeInput.value = minVolume;
   renderOrders(orders);
   renderStats(orders);
+});
+
+minVolumeInput.addEventListener('input', () => {
+  const value = minVolumeInput.value.trim().toUpperCase();
+  chrome.storage.local.set({ [MIN_VOLUME_KEY]: value });
 });
 
 clearBtn.onclick = () => {

@@ -124,4 +124,59 @@ filledObserver.observe(document.documentElement, { childList: true, subtree: tru
 window.addEventListener('beforeunload', () => {
   buttonObserver.disconnect();
   filledObserver.disconnect();
+  volumeFilterObserver.disconnect();
 });
+
+// ===== Volume Filter =====
+const MIN_VOLUME_KEY = 'minVolume';
+let currentMinVolume = 50000000; // 50M default
+
+function parseVolume(text) {
+  if (!text) return 0;
+  const clean = text.replace(/[$,]/g, '').trim().toUpperCase();
+  const match = clean.match(/^([\d.]+)([KMB])?$/);
+  if (!match) return 0;
+
+  const num = parseFloat(match[1]);
+  const unit = match[2];
+
+  switch (unit) {
+    case 'K': return num * 1000;
+    case 'M': return num * 1000000;
+    case 'B': return num * 1000000000;
+    default: return num;
+  }
+}
+
+function applyVolumeFilter() {
+  const rows = document.querySelectorAll('tr[data-testid^="row-"]');
+  rows.forEach(row => {
+    const volumeCell = row.querySelector('td[data-testid$="_dailyQuoteVolume"] p');
+    if (!volumeCell) return;
+
+    const volume = parseVolume(volumeCell.textContent);
+    row.style.display = volume >= currentMinVolume ? '' : 'none';
+  });
+}
+
+// Load saved min volume
+chrome.storage.local.get(MIN_VOLUME_KEY, (result) => {
+  const saved = result[MIN_VOLUME_KEY] || '50M';
+  currentMinVolume = parseVolume(saved);
+  applyVolumeFilter();
+});
+
+// Listen for changes
+chrome.storage.onChanged.addListener((changes) => {
+  if (changes[MIN_VOLUME_KEY]) {
+    currentMinVolume = parseVolume(changes[MIN_VOLUME_KEY].newValue || '50M');
+    applyVolumeFilter();
+  }
+});
+
+// Observe for new rows
+const volumeFilterObserver = new MutationObserver(() => {
+  applyVolumeFilter();
+});
+
+volumeFilterObserver.observe(document.documentElement, { childList: true, subtree: true });
