@@ -2,91 +2,246 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>Orders</title>
+  <title>Lighter Cost</title>
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: monospace;
-      background: #111;
-      color: #eee;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(180deg, #0d0d0f 0%, #1a1a1f 100%);
+      color: #e4e4e7;
       margin: 0;
-      padding: 6px;
-      width: 850px;
+      padding: 16px;
+      min-height: 200px;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header h1::before {
+      content: '';
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: #22c55e;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #22c55e;
+    }
+
+    .btn-clear {
+      background: rgba(239, 68, 68, 0.1);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-clear:hover {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(239, 68, 68, 0.4);
+    }
+
+    /* Stats Cards */
+    .stats-grid {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .stat-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 6px;
+      padding: 10px;
+      flex: 1;
+    }
+
+    .stat-card .label {
+      font-size: 10px;
+      color: #71717a;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-bottom: 3px;
+    }
+
+    .stat-card .value {
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .stat-card .value.negative {
+      color: #f87171;
+    }
+
+    .stat-card .value.positive {
+      color: #4ade80;
+    }
+
+    /* Table */
+    .table-container {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 10px;
+      overflow: hidden;
     }
 
     table {
-      width: 100%;
       border-collapse: collapse;
-      font-size: 13px;
-    }
-
-    th, td {
-      padding: 4px 6px;
-      border-bottom: 1px solid #333;
-      text-align: right;
-      white-space: nowrap;
+      font-size: 12px;
     }
 
     th {
-      position: sticky;
-      top: 0;
-      background: #1a1a1a;
-      z-index: 1;
+      background: rgba(0,0,0,0.3);
+      padding: 8px 8px;
+      text-align: right;
+      font-weight: 500;
+      color: #71717a;
+      text-transform: uppercase;
+      font-size: 10px;
+      letter-spacing: 0.3px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      white-space: nowrap;
     }
 
-    td.symbol, th.symbol {
+    th:first-child, td:first-child {
       text-align: left;
-      font-weight: bold;
     }
 
-    tr.positive { color: #4ADE80; }
-    tr.negative { color: #F87171; }
-
-    .toolbar {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 6px;
-      font-size: 13px;
+    td {
+      padding: 8px 8px;
+      text-align: right;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      color: #a1a1aa;
+      white-space: nowrap;
     }
 
-    button {
-      background: #222;
-      color: #eee;
-      border: 1px solid #444;
-      padding: 2px 6px;
-      cursor: pointer;
+    tbody tr {
+      transition: background 0.15s;
     }
 
-    button:hover {
-      background: #333;
+    tbody tr:hover {
+      background: rgba(255,255,255,0.03);
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Symbol column */
+    td.symbol {
+      text-align: left;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    /* Side badges */
+    .badge {
+      display: inline-block;
+      padding: 3px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .badge-long {
+      background: rgba(74, 222, 128, 0.15);
+      color: #4ade80;
+    }
+
+    .badge-short {
+      background: rgba(248, 113, 113, 0.15);
+      color: #f87171;
+    }
+
+    /* Slip colors */
+    .slip-positive {
+      color: #4ade80;
+    }
+
+    .slip-negative {
+      color: #f87171;
+    }
+
+    /* Cost column */
+    td.cost {
+      color: #fbbf24;
+      font-weight: 500;
+    }
+
+    /* Latency */
+    td.latency {
+      color: #60a5fa;
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: #52525b;
+    }
+
+    .empty-state svg {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 12px;
+      opacity: 0.3;
     }
   </style>
 </head>
 <body>
 
-  <div class="toolbar">
-    <div id="stats"></div>
-    <button id="clear">Clear</button>
+  <div class="header">
+    <h1>Lighter Cost Tracker</h1>
+    <button id="clear" class="btn-clear">Clear All</button>
   </div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Time</th>
-        <th class="symbol">Symbol</th>
-        <th>Side</th>
-        <th>Size</th>
-        <th>Best</th>
-        <th>Price</th>
-        <th>Spread %</th> <!-- Nueva columna -->
-        <th>Slip %</th>
-        <th>Cost</th>
-        <th>Latency</th>
-      </tr>
-    </thead>
-    <tbody id="orders"></tbody>
-  </table>
+  <div class="stats-grid" id="stats"></div>
+
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Symbol</th>
+          <th>Side</th>
+          <th>Size</th>
+          <th>Best</th>
+          <th>Price</th>
+          <th>Spread</th>
+          <th>Slippage</th>
+          <th>Cost</th>
+          <th>Latency</th>
+        </tr>
+      </thead>
+      <tbody id="orders"></tbody>
+    </table>
+  </div>
 
   <script src="popup.js"></script>
 </body>
 </html>
-
