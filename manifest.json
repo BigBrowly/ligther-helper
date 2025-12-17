@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Button Click Notifier (lighter.xyz)",
+  "name": "Lighter Cost Tracker",
   "version": "1.0.0",
-  "description": "Detects button clicks on app.lighter.xyz and shows notifications",
+  "description": "Track execution costs (spread, slippage, latency) for market orders on Lighter.xyz",
   "permissions": [
     "notifications",
     "activeTab",
