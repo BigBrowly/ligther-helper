@@ -35,11 +35,11 @@ function addClickListener(button, callback) {
 }
 
 // Valid button texts for market orders
-const MARKET_ORDER_TEXTS = ['Place Market Order', 'Close position'];
+const MARKET_ORDER_TEXTS = ['Place Market Order', 'Close Position'];
 
 // Button click handler - only acts for market orders
 function handleButtonClick(event) {
-  const buttonText = event.target.innerText?.trim();
+  const buttonText = event.currentTarget.innerText?.trim();
 
   // Only process if it's a market order
   if (!MARKET_ORDER_TEXTS.some(text => buttonText?.includes(text))) {
