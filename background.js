@@ -1,7 +1,11 @@
 const ORDERS_KEY = 'orders';
 
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.local.set({ [ORDERS_KEY]: [] });
+  chrome.storage.local.get(ORDERS_KEY, (result) => {
+    if (result[ORDERS_KEY] === undefined) {
+      chrome.storage.local.set({ [ORDERS_KEY]: [] });
+    }
+  });
 });
 
 
