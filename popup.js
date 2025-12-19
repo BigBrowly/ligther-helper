@@ -115,10 +115,6 @@ function renderStats(orders) {
         <div class="value">$0.00</div>
       </div>
       <div class="stat-card">
-        <div class="label">Avg Latency</div>
-        <div class="value">-</div>
-      </div>
-      <div class="stat-card">
         <div class="label">Avg Spread</div>
         <div class="value">-</div>
       </div>
@@ -126,17 +122,17 @@ function renderStats(orders) {
         <div class="label">Avg Slippage</div>
         <div class="value">-</div>
       </div>
+      <div class="stat-card">
+        <div class="label">Avg Latency</div>
+        <div class="value">-</div>
+      </div>
     `;
     return;
   }
 
-  const validLatencies = orders.map(o => o.latency).filter(l => typeof l === 'number');
   const validSlips = orders.map(o => o.slipRatio).filter(s => typeof s === 'number');
   const validSpreads = orders.map(o => o.spread).filter(s => typeof s === 'number');
-
-  const avgLatency = validLatencies.length
-    ? validLatencies.reduce((a, l) => a + l, 0) / validLatencies.length
-    : null;
+  const validLatencies = orders.map(o => o.latency).filter(l => typeof l === 'number');
 
   const avgSlip = validSlips.length
     ? validSlips.reduce((a, s) => a + s, 0) / validSlips.length
@@ -144,6 +140,10 @@ function renderStats(orders) {
 
   const avgSpread = validSpreads.length
     ? validSpreads.reduce((a, s) => a + s, 0) / validSpreads.length
+    : null;
+
+  const avgLatency = validLatencies.length
+    ? validLatencies.reduce((a, l) => a + l, 0) / validLatencies.length
     : null;
 
   const totalCost = orders
@@ -162,16 +162,16 @@ function renderStats(orders) {
       <div class="value negative">$${totalCost.toFixed(2)}</div>
     </div>
     <div class="stat-card">
-      <div class="label">Avg Latency</div>
-      <div class="value">${avgLatency != null ? avgLatency.toFixed(0) + 'ms' : '-'}</div>
-    </div>
-    <div class="stat-card">
       <div class="label">Avg Spread</div>
       <div class="value">${avgSpread != null ? (avgSpread * 100).toFixed(3) + '%' : '-'}</div>
     </div>
     <div class="stat-card">
       <div class="label">Avg Slippage</div>
       <div class="value ${slipClass}">${avgSlip != null ? (avgSlip * 100).toFixed(3) + '%' : '-'}</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Avg Latency</div>
+      <div class="value">${avgLatency != null ? avgLatency.toFixed(0) + 'ms' : '-'}</div>
     </div>
   `;
 }

@@ -8,7 +8,6 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
-
 chrome.runtime.onMessage.addListener((message) => {
   if (!message || !message.type) return;
 
@@ -16,50 +15,81 @@ chrome.runtime.onMessage.addListener((message) => {
 
   // === Market order filled notification ===
   if (message.type === 'MARKET_NOTIFICATION_FILLED') {
-    console.log(message.payload);
-    const { symbol, side, bestprice, price, size, latency } = message.payload;
+    const { symbol, side, price, size, bestBid, bestAsk, bookAvgPrice, bookBestPrice, latency } = message.payload;
 
-    const spread = (bestprice['bestAsk'] - bestprice['bestBid']) / bestprice['bestAsk'];
-    const spread_text = bestprice['bestBid'] + '/' + bestprice['bestAsk'];
+    // Calculate spread using book average price (size-adjusted) or fall back to simple bid-ask
+    let spread, bestPrice, slippage, slipRatio;
+    const spreadText = `${bestBid?.toFixed(4) || '-'}/${bestAsk?.toFixed(4) || '-'}`;
 
-    let bestPrice;
-    let slippage;
-    let slipRatio;
+    // Base bid-ask spread (half, since we only pay our side)
+    const bidAskSpread = (bestAsk && bestBid) ? (bestAsk - bestBid) / ((bestAsk + bestBid) / 2) : 0;
+    const halfBidAskSpread = bidAskSpread / 2;
 
-    if(side == 'LONG') {
-      bestPrice = bestprice['bestAsk']; 
-      slippage = price - bestPrice;
-      slipRatio = (price - bestPrice) / bestPrice
+    if (bookAvgPrice && bookBestPrice) {
+      // Depth impact: how much worse than best price due to order book depth
+      const depthImpact = Math.abs(bookAvgPrice - bookBestPrice) / bookBestPrice;
+
+      // Total spread = half bid-ask + depth impact
+      spread = halfBidAskSpread + depthImpact;
+      bestPrice = bookBestPrice;
+
+      // Slippage: difference between actual execution and book avg price
+      if (side === 'LONG') {
+        slippage = price - bookAvgPrice;
+        slipRatio = bookAvgPrice ? slippage / bookAvgPrice : 0;
+      } else {
+        slippage = bookAvgPrice - price;
+        slipRatio = bookAvgPrice ? slippage / bookAvgPrice : 0;
+      }
+    } else {
+      // Fallback to simple half bid-ask spread
+      spread = halfBidAskSpread;
+
+      if (side === 'LONG') {
+        bestPrice = bestAsk;
+        slippage = bestPrice ? price - bestPrice : 0;
+        slipRatio = bestPrice ? slippage / bestPrice : 0;
+      } else {
+        bestPrice = bestBid;
+        slippage = bestPrice ? bestPrice - price : 0;
+        slipRatio = bestPrice ? slippage / bestPrice : 0;
+      }
     }
-    else
-    {
-      bestPrice = bestprice['bestBid']; 
-      slippage = bestPrice - price;
-      slipRatio = (bestPrice - price) / bestPrice
-    }
 
-    const cost = size * price * (spread / 2 + slipRatio)
+    // Cost = size * price * (spread + slippage)
+    // Slippage can be negative (better execution) or positive (worse execution)
+    const cost = size * price * (spread + slipRatio);
 
     chrome.storage.local.get(ORDERS_KEY, ({ orders = [] }) => {
-      orders.push({id:crypto.randomUUID(), timestamp: Date.now(), symbol, side, price, size, bestPrice, spread, slipRatio, cost, latency});
+      orders.push({
+        id: crypto.randomUUID(),
+        timestamp: Date.now(),
+        symbol,
+        side,
+        price,
+        size,
+        bestPrice,
+        spread,
+        slipRatio,
+        cost,
+        latency
+      });
       chrome.storage.local.set({ [ORDERS_KEY]: orders });
     });
 
-      
     chrome.notifications.create({
       type: 'basic',
       iconUrl,
-      title: 'Market Order Filled',
+      title: 'Trade Filled',
       message:
         `${symbol} - ${side}\n` +
-        `Bid/Ask: ${spread_text}\n` +
-        `Price: ${price ?? '-'}\n` +
+        `Bid/Ask: ${spreadText}\n` +
+        `Price: ${price?.toFixed(4) || '-'}\n` +
         `Spread: ${(spread * 100).toFixed(4)}%\n` +
-        `Slippage: ${slippage.toLocaleString()} Ratio: ${(slipRatio * 100).toFixed(4)}%\n` +
+        `Slippage: ${slippage?.toFixed(4) || '-'} (${(slipRatio * 100).toFixed(4)}%)\n` +
         `Size: ${size}\n` +
-        `Cost: ${cost.toFixed(4)}$\n` +
-        `Latency: ${latency}`
+        `Cost: $${cost.toFixed(4)}` +
+        (latency ? `\nLatency: ${latency}ms` : '')
     });
   }
 });
-
