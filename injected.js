@@ -249,6 +249,7 @@ function calculateBookAvgPrice(book, side, size) {
 
 // Order book storage per market
 window._lighterOrderBooks = window._lighterOrderBooks || {};
+window._lighterMarketNames = window._lighterMarketNames || {};
 
 // Clear order books when changing token/market
 window._clearOrderBooks = () => {
@@ -294,6 +295,17 @@ window.WebSocket = function(url, protocols) {
     ws.addEventListener('message', (event) => {
       const handleDecoded = (decoded) => {
         const type = decoded?.type;
+
+        // Capture market names from market_stats
+        if (type?.includes('market_stats')) {
+          const stats = decoded?.market_stats;
+          const markets = stats ? Object.values(stats) : [];
+          markets.forEach(m => {
+            if (m.market_id !== undefined && m.symbol) {
+              window._lighterMarketNames[m.market_id] = m.symbol;
+            }
+          });
+        }
 
         // Capture order book updates (including initial snapshot on subscribe)
         if (type === 'subscribed/order_book' || type === 'update/order_book') {
@@ -439,10 +451,12 @@ window.WebSocket = function(url, protocols) {
             }
 
             // Send to content.js via postMessage
+            const symbolName = window._lighterMarketNames[marketId] || window._lighterMarketNames[Number(marketId)] || `Market ${marketId}`;
+
             window.postMessage({
               type: 'LIGHTER_HELPER_TRADE',
               payload: {
-                symbol: `Market ${marketId}`,
+                symbol: symbolName,
                 side,
                 price: avgPrice,
                 size: totalSize,
