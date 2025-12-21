@@ -250,7 +250,24 @@ function calculateBookAvgPrice(book, side, size) {
 // Order book storage per market
 window._lighterOrderBooks = window._lighterOrderBooks || {};
 
-// Track button clicks for latency and order book snapshot
+// Clear order books when changing token/market
+window._clearOrderBooks = () => {
+  for (const marketId in window._lighterOrderBooks) {
+    window._lighterOrderBooks[marketId] = { bids: {}, asks: {} };
+  }
+  console.log('[Lighter Helper] Order books cleared');
+};
+
+// Auto-clear on URL change (token switch)
+let _lastPathname = window.location.pathname;
+setInterval(() => {
+  if (window.location.pathname !== _lastPathname) {
+    _lastPathname = window.location.pathname;
+    window._clearOrderBooks();
+  }
+}, 500);
+
+// Track order submission for latency and order book snapshot
 window._lighterClickTimestamp = null;
 window._lighterBookSnapshot = null;
 
@@ -261,7 +278,6 @@ document.addEventListener('click', (e) => {
     if (text?.includes('Place Market Order') || text?.includes('Close Position')) {
       window._lighterClickTimestamp = Date.now();
       window._lighterBookSnapshot = JSON.parse(JSON.stringify(window._lighterOrderBooks));
-      console.log('[Lighter Helper] Captured order book snapshot');
     }
   }
 }, true);
@@ -279,8 +295,8 @@ window.WebSocket = function(url, protocols) {
       const handleDecoded = (decoded) => {
         const type = decoded?.type;
 
-        // Capture order book updates
-        if (type === 'update/order_book') {
+        // Capture order book updates (including initial snapshot on subscribe)
+        if (type === 'subscribed/order_book' || type === 'update/order_book') {
           const channel = decoded?.channel;
           const marketId = channel?.split(':')[1];
           if (!marketId) return;
@@ -290,6 +306,12 @@ window.WebSocket = function(url, protocols) {
 
           const bids = ob.bids || [];
           const asks = ob.asks || [];
+
+          // For snapshot (subscribed), reset the order book first
+          if (type === 'subscribed/order_book') {
+            orderBooks[marketId] = { bids: {}, asks: {} };
+            console.log(`[Lighter Helper] Received orderbook snapshot for market ${marketId}: ${bids.length} bids, ${asks.length} asks`);
+          }
 
           // Store order book data
           if (!orderBooks[marketId]) {
@@ -408,12 +430,12 @@ window.WebSocket = function(url, protocols) {
               if (askPrices.length) bestAsk = Math.min(...askPrices);
             }
 
-            // Calculate latency if we have a click timestamp
+            // Calculate latency from click to trade confirmation
             let latency = null;
             if (window._lighterClickTimestamp) {
               latency = Date.now() - window._lighterClickTimestamp;
               window._lighterClickTimestamp = null;
-              window._lighterBookSnapshot = null; // Clear snapshot after use
+              window._lighterBookSnapshot = null;
             }
 
             // Send to content.js via postMessage
@@ -476,36 +498,23 @@ setInterval(() => {
     const bidAskSpread = (bestAsk - bestBid) / midPrice;
     const halfBidAskSpread = bidAskSpread / 2;
 
-    // Clean stale levels outside ±5% of mid price
-    const cleanRange = 0.05;
-    const cleanMin = midPrice * (1 - cleanRange);
-    const cleanMax = midPrice * (1 + cleanRange);
+    // Total liquidity (no filtering)
+    const totalBidLiquidity = Object.values(book.bids || {}).reduce((a, b) => a + b, 0);
+    const totalAskLiquidity = Object.values(book.asks || {}).reduce((a, b) => a + b, 0);
+    const bidLevels = Object.keys(book.bids || {}).length;
+    const askLevels = Object.keys(book.asks || {}).length;
 
-    Object.keys(book.bids).forEach(p => {
-      if (parseFloat(p) < cleanMin) delete book.bids[p];
-    });
-    Object.keys(book.asks).forEach(p => {
-      if (parseFloat(p) > cleanMax) delete book.asks[p];
-    });
+    // Liquidity in USD
+    const bidLiquidityUSD = totalBidLiquidity * midPrice;
+    const askLiquidityUSD = totalAskLiquidity * midPrice;
 
-    // Filter liquidity within ±2% of mid price (like the web UI)
-    const range = 0.02;
-    const minPrice = midPrice * (1 - range);
-    const maxPrice = midPrice * (1 + range);
-
-    const filteredBids = Object.entries(book.bids || {}).filter(([p]) => parseFloat(p) >= minPrice);
-    const filteredAsks = Object.entries(book.asks || {}).filter(([p]) => parseFloat(p) <= maxPrice);
-
-    const totalBidLiquidity = filteredBids.reduce((a, [, s]) => a + s, 0);
-    const totalAskLiquidity = filteredAsks.reduce((a, [, s]) => a + s, 0);
-    const bidLevels = filteredBids.length;
-    const askLevels = filteredAsks.length;
+    const formatUSD = (v) => v >= 1000000 ? `${(v/1000000).toFixed(2)}M` : `${(v/1000).toFixed(0)}k`;
 
     console.log(`\n[Spread Monitor] Market ${marketId} | Bid: ${bestBid.toFixed(4)} | Ask: ${bestAsk.toFixed(4)}`);
-    console.log(`Levels: ${bidLevels} bids / ${askLevels} asks | Liquidity: ${totalBidLiquidity.toFixed(2)} bid / ${totalAskLiquidity.toFixed(2)} ask`);
+    console.log(`Levels: ${bidLevels} bids / ${askLevels} asks | Liquidity: $${formatUSD(bidLiquidityUSD)} bid / $${formatUSD(askLiquidityUSD)} ask`);
     console.log('─'.repeat(70));
 
-    console.log('   USD $ | AvgBuy       | AvgSell      | Spread');
+    console.log('   USD $ | AvgBuy       | AvgSell      | Spread   | Cost $');
 
     usdSizes.forEach(usd => {
       // Convert USD to size using mid price
@@ -524,16 +533,21 @@ setInterval(() => {
         ? (avgBuy - avgSell) / midPrice
         : null;
 
+      // Cost in USD = spread * position size
+      const costUsd = spread !== null ? spread * usd : null;
+
       const usdStr = usd >= 1000 ? `${(usd / 1000).toFixed(0)}k` : usd.toString();
       const avgBuyStr = avgBuy !== null ? avgBuy.toFixed(4) : 'N/A';
       const avgSellStr = avgSell !== null ? avgSell.toFixed(4) : 'N/A';
       const spreadStr = spread !== null ? `${(spread * 100).toFixed(4)}%` : 'N/A';
+      const costStr = costUsd !== null ? `$${costUsd.toFixed(2)}` : 'N/A';
 
       console.log(
         `${usdStr.padStart(8)} | ` +
         `${avgBuyStr.padStart(12)} | ` +
         `${avgSellStr.padStart(12)} | ` +
-        `${spreadStr.padStart(8)}`
+        `${spreadStr.padStart(8)} | ` +
+        `${costStr.padStart(8)}`
       );
     });
   });
