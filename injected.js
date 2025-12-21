@@ -422,9 +422,8 @@ window.WebSocket = function(url, protocols) {
 };
 window.WebSocket.prototype = OriginalWebSocket.prototype;
 
-// Nonce cache
-let cachedNonce = null;
-let cachedAccountIndex = null;
+// Nonce cache per account_index
+const nonceCache = {};  // { accountIndex: nonce }
 
 const ACCOUNT_INDEX_KEY = 'lighter_helper_account_index';
 
@@ -434,24 +433,18 @@ const originalFetch = window.fetch;
 async function prefetchNonce() {
   const savedAccountIndex = localStorage.getItem(ACCOUNT_INDEX_KEY);
   if (!savedAccountIndex) {
-    console.log('[Lighter Helper] No saved account_index, skipping prefetch');
     return;
   }
 
   try {
-    console.log('[Lighter Helper] Prefetching nonce for account:', savedAccountIndex);
     const response = await originalFetch(`https://mainnet.zklighter.elliot.ai/api/v1/nextNonce?account_index=${savedAccountIndex}&api_key_index=0`);
     const data = await response.json();
-    console.log('[Lighter Helper] Prefetch response:', data);
 
     if (data.code === 200 && data.nonce != null) {
-      cachedNonce = data.nonce;
-      cachedAccountIndex = savedAccountIndex;
-      console.log('[Lighter Helper] Prefetched nonce:', cachedNonce);
+      nonceCache[savedAccountIndex] = data.nonce;
+      console.log('[Lighter Helper] Prefetched nonce for', savedAccountIndex, ':', data.nonce);
     }
-  } catch (e) {
-    console.log('[Lighter Helper] Prefetch failed:', e);
-  }
+  } catch (e) {}
 }
 
 prefetchNonce();
@@ -465,17 +458,17 @@ window.fetch = async function(...args) {
     const urlObj = new URL(urlStr);
     const accountIndex = urlObj.searchParams.get('account_index');
 
-    // Save account_index for future prefetch
+    // Save account_index for trade tracking
     if (accountIndex) {
       localStorage.setItem(ACCOUNT_INDEX_KEY, accountIndex);
     }
 
-    // If we have a cached nonce for this account, return it immediately
-    if (cachedNonce !== null && cachedAccountIndex === accountIndex) {
-      const nonceToReturn = cachedNonce;
-      cachedNonce++;
+    // If we have a cached nonce for THIS account, return it
+    if (accountIndex && nonceCache[accountIndex] != null) {
+      const nonceToReturn = nonceCache[accountIndex];
+      nonceCache[accountIndex]++;
 
-      console.log('[Lighter Helper] Returning cached nonce:', nonceToReturn, '(next:', cachedNonce, ')');
+      console.log('[Lighter Helper] Cached nonce for', accountIndex, ':', nonceToReturn);
 
       return new Response(JSON.stringify({ code: 200, nonce: nonceToReturn }), {
         status: 200,
@@ -483,22 +476,23 @@ window.fetch = async function(...args) {
       });
     }
 
-    // No cache, make the real request and cache the result
+    // No cache for this account, make real request and cache result
     const response = await originalFetch.apply(this, args);
     const cloned = response.clone();
 
     try {
       const data = await cloned.json();
-      // La app va a usar este nonce, así que cacheamos el siguiente
-      cachedNonce = data.nonce + 1;
-      cachedAccountIndex = accountIndex;
-      console.log('[Lighter Helper] Real request, app uses:', data.nonce, '(cached next:', cachedNonce, ')');
+      if (data.code === 200 && data.nonce != null) {
+        // App will use this nonce, cache the next one
+        nonceCache[accountIndex] = data.nonce + 1;
+        console.log('[Lighter Helper] Real nonce for', accountIndex, ':', data.nonce, '(cached next:', nonceCache[accountIndex], ')');
+      }
     } catch (e) {}
 
     return response;
   }
 
-  // Intercept sendTx responses to detect nonce errors
+  // Intercept sendTx to detect nonce errors
   if (urlStr.includes('/api/v1/sendTx')) {
     const response = await originalFetch.apply(this, args);
     const cloned = response.clone();
@@ -506,15 +500,14 @@ window.fetch = async function(...args) {
     try {
       const data = await cloned.json();
       if (data.code === 21104) {
-        console.log('[Lighter Helper] Invalid nonce detected, resetting cache');
-        cachedNonce = null;
-        cachedAccountIndex = null;
+        // Invalid nonce - clear ALL caches to resync
+        console.log('[Lighter Helper] Invalid nonce, clearing cache');
+        Object.keys(nonceCache).forEach(k => delete nonceCache[k]);
       }
     } catch (e) {}
 
     return response;
   }
 
-  // All other requests pass through normally
   return originalFetch.apply(this, args);
 };
