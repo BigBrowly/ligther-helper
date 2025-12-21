@@ -208,18 +208,23 @@ function calculateBookAvgPrice(book, side, size) {
   const isBuy = side === 'LONG';
   const levels = isBuy ? book.asks : book.bids;
 
-  const prices = Object.keys(levels).map(Number);
-  if (!prices.length) return null;
+  // Keep original string keys paired with numeric prices for sorting
+  const entries = Object.entries(levels).map(([priceStr, sz]) => ({
+    priceStr,
+    price: parseFloat(priceStr),
+    size: sz
+  }));
+
+  if (!entries.length) return null;
 
   // Sort: asks ascending, bids descending
-  prices.sort((a, b) => isBuy ? a - b : b - a);
+  entries.sort((a, b) => isBuy ? a.price - b.price : b.price - a.price);
 
   let remainingSize = size;
   let totalCost = 0;
   let filledSize = 0;
 
-  for (const price of prices) {
-    const availableSize = levels[price];
+  for (const { price, size: availableSize } of entries) {
     const fillSize = Math.min(remainingSize, availableSize);
 
     totalCost += fillSize * price;
@@ -231,7 +236,7 @@ function calculateBookAvgPrice(book, side, size) {
 
   if (filledSize === 0) return null;
 
-  const bestPrice = prices[0];
+  const bestPrice = entries[0].price;
   const avgPrice = totalCost / filledSize;
 
   return {
@@ -311,7 +316,34 @@ window.WebSocket = function(url, protocols) {
           return;
         }
 
-        // Handle trades
+        // Handle trades - update order book by consuming liquidity
+        if (type === 'update/trade') {
+          const trades = decoded?.trades || [];
+
+          trades.forEach(trade => {
+            const marketId = String(trade.market_id);
+            const price = String(trade.price);
+            const size = parseFloat(trade.size);
+
+            if (orderBooks[marketId]) {
+              // Trade consumes from both sides at this price
+              if (orderBooks[marketId].asks[price] !== undefined) {
+                orderBooks[marketId].asks[price] -= size;
+                if (orderBooks[marketId].asks[price] <= 0) {
+                  delete orderBooks[marketId].asks[price];
+                }
+              }
+              if (orderBooks[marketId].bids[price] !== undefined) {
+                orderBooks[marketId].bids[price] -= size;
+                if (orderBooks[marketId].bids[price] <= 0) {
+                  delete orderBooks[marketId].bids[price];
+                }
+              }
+            }
+          });
+        }
+
+        // Handle my trades for notifications
         if (type !== 'update/trade') return;
 
         const myAccount = localStorage.getItem(ACCOUNT_INDEX_KEY);
@@ -421,6 +453,91 @@ window.WebSocket = function(url, protocols) {
   return ws;
 };
 window.WebSocket.prototype = OriginalWebSocket.prototype;
+
+// ===== Spread Monitor: Print spread every 10 seconds =====
+// Toggle with: window._spreadMonitor = true/false
+window._spreadMonitor = false;
+
+setInterval(() => {
+  if (!window._spreadMonitor) return;
+
+  const usdSizes = [1000, 5000, 25000, 50000, 100000, 250000, 500000];
+  const orderBooks = window._lighterOrderBooks;
+
+  Object.entries(orderBooks).forEach(([marketId, book]) => {
+    const bidPrices = Object.keys(book.bids || {}).map(Number);
+    const askPrices = Object.keys(book.asks || {}).map(Number);
+
+    if (!bidPrices.length || !askPrices.length) return;
+
+    const bestBid = Math.max(...bidPrices);
+    const bestAsk = Math.min(...askPrices);
+    const midPrice = (bestBid + bestAsk) / 2;
+    const bidAskSpread = (bestAsk - bestBid) / midPrice;
+    const halfBidAskSpread = bidAskSpread / 2;
+
+    // Clean stale levels outside ±5% of mid price
+    const cleanRange = 0.05;
+    const cleanMin = midPrice * (1 - cleanRange);
+    const cleanMax = midPrice * (1 + cleanRange);
+
+    Object.keys(book.bids).forEach(p => {
+      if (parseFloat(p) < cleanMin) delete book.bids[p];
+    });
+    Object.keys(book.asks).forEach(p => {
+      if (parseFloat(p) > cleanMax) delete book.asks[p];
+    });
+
+    // Filter liquidity within ±2% of mid price (like the web UI)
+    const range = 0.02;
+    const minPrice = midPrice * (1 - range);
+    const maxPrice = midPrice * (1 + range);
+
+    const filteredBids = Object.entries(book.bids || {}).filter(([p]) => parseFloat(p) >= minPrice);
+    const filteredAsks = Object.entries(book.asks || {}).filter(([p]) => parseFloat(p) <= maxPrice);
+
+    const totalBidLiquidity = filteredBids.reduce((a, [, s]) => a + s, 0);
+    const totalAskLiquidity = filteredAsks.reduce((a, [, s]) => a + s, 0);
+    const bidLevels = filteredBids.length;
+    const askLevels = filteredAsks.length;
+
+    console.log(`\n[Spread Monitor] Market ${marketId} | Bid: ${bestBid.toFixed(4)} | Ask: ${bestAsk.toFixed(4)}`);
+    console.log(`Levels: ${bidLevels} bids / ${askLevels} asks | Liquidity: ${totalBidLiquidity.toFixed(2)} bid / ${totalAskLiquidity.toFixed(2)} ask`);
+    console.log('─'.repeat(70));
+
+    console.log('   USD $ | AvgBuy       | AvgSell      | Spread');
+
+    usdSizes.forEach(usd => {
+      // Convert USD to size using mid price
+      const size = usd / midPrice;
+
+      // Calculate for BUY side (consuming asks)
+      const buyResult = calculateBookAvgPrice(book, 'LONG', size);
+      // Calculate for SELL side (consuming bids)
+      const sellResult = calculateBookAvgPrice(book, 'SHORT', size);
+
+      const avgBuy = buyResult?.fullyFilled ? buyResult.avgPrice : null;
+      const avgSell = sellResult?.fullyFilled ? sellResult.avgPrice : null;
+
+      // Spread = (avgBuy - avgSell) / midPrice
+      const spread = (avgBuy !== null && avgSell !== null)
+        ? (avgBuy - avgSell) / midPrice
+        : null;
+
+      const usdStr = usd >= 1000 ? `${(usd / 1000).toFixed(0)}k` : usd.toString();
+      const avgBuyStr = avgBuy !== null ? avgBuy.toFixed(4) : 'N/A';
+      const avgSellStr = avgSell !== null ? avgSell.toFixed(4) : 'N/A';
+      const spreadStr = spread !== null ? `${(spread * 100).toFixed(4)}%` : 'N/A';
+
+      console.log(
+        `${usdStr.padStart(8)} | ` +
+        `${avgBuyStr.padStart(12)} | ` +
+        `${avgSellStr.padStart(12)} | ` +
+        `${spreadStr.padStart(8)}`
+      );
+    });
+  });
+}, 10000);
 
 // Nonce cache per account_index
 const nonceCache = {};  // { accountIndex: nonce }
